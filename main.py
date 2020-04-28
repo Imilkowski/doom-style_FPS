@@ -1,7 +1,6 @@
 import pygame
 from pygame.locals import *
 import sys
-import random
 
 # settings
 width = 1280
@@ -31,7 +30,9 @@ def read_map():
 
         walls.append([cord1, cord2])
 
-    return walls
+    start_position = (500, 500)
+
+    return walls, start_position
 
 
 def game_init():
@@ -46,13 +47,12 @@ def game_init():
 def map_init():
     print("Map view")
 
-    map_size = 1000
     scale = 0.5
 
-    screen = pygame.display.set_mode((int(map_size * scale), int(map_size * scale)), 0, 32)
+    screen = pygame.display.set_mode((int(1000 * scale), int(1000 * scale)), 0, 32)
     pygame.display.set_caption('Map')
 
-    return screen, scale
+    return screen, scale, 500, 500
 
 
 def map_render():
@@ -61,17 +61,47 @@ def map_render():
     for wall in walls:
         pygame.draw.line(screen, (255, 255, 255), [i * scale for i in wall[0]], [i * scale for i in wall[1]], 2)
 
+    pygame.draw.circle(screen, (0, 175, 255), (player.x, player.y), 5)
 
-walls = read_map()
 
-screen, scale = map_init()
+class Player:
+    def __init__(self, start_position):
+        self.x = start_position[0]
+        self.y = start_position[1]
+
+
+walls, start_position = read_map()
+screen, scale, width, height = map_init()
+
+player = Player(start_position)
+
+# divide for map view
+player.x = (int(player.x/2))
+player.y = (int(player.y/2))
 
 while True:
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            pygame.quit()
-            sys.exit()
+    def controls():
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
 
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w]:
+            if player.y > 0:
+                player.y -= 1
+        if keys[pygame.K_s]:
+            if player.y < height:
+                player.y += 1
+        if keys[pygame.K_a]:
+            if player.x > 0:
+                player.x -= 1
+        if keys[pygame.K_d]:
+            if player.x < width:
+                player.x += 1
+
+    controls()
     map_render()
 
     pygame.display.update()
+    fpsClock.tick(60)
