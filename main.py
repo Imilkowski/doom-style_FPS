@@ -1,10 +1,12 @@
 import pygame
 from pygame.locals import *
 import sys
+import math
 
 # settings
 width = 1280
 height = int(width * 0.5625)
+mouse_sensitivity = 1
 
 pygame.init()
 fpsClock = pygame.time.Clock()
@@ -58,16 +60,31 @@ def map_init():
 def map_render():
     screen.fill((0, 0, 0))
 
+    # walls
     for wall in walls:
         pygame.draw.line(screen, (255, 255, 255), [i * scale for i in wall[0]], [i * scale for i in wall[1]], 2)
 
+    # player
     pygame.draw.circle(screen, (0, 175, 255), (player.x, player.y), 5)
+
+    def draw_ray(angle):
+        angle -= 90
+
+        rad = math.radians(angle)
+        pos = int(player.x + 750 * math.cos(rad)), int(player.y + 750 * math.sin(rad))
+
+        pygame.draw.line(screen, (255, 0, 0), (player.x, player.y), pos, 2)
+
+    # cone of view
+    draw_ray(player.angle-45)
+    draw_ray(player.angle+45)
 
 
 class Player:
     def __init__(self, start_position):
         self.x = start_position[0]
         self.y = start_position[1]
+        self.angle = 0
 
 
 walls, start_position = read_map()
@@ -79,12 +96,19 @@ player = Player(start_position)
 player.x = (int(player.x/2))
 player.y = (int(player.y/2))
 
+last_X = 0
 while True:
-    def controls():
+    def controls(last_X):
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
+            if event.type == MOUSEMOTION:
+                mouse_X, _ = event.pos
+                movement = mouse_X - last_X
+
+                player.angle = player.angle + (movement*(360/width)*mouse_sensitivity)
+                last_X = mouse_X
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]:
@@ -100,7 +124,9 @@ while True:
             if player.x < width:
                 player.x += 1
 
-    controls()
+        return last_X
+
+    last_X = controls(last_X)
     map_render()
 
     pygame.display.update()
