@@ -2,14 +2,18 @@ import pygame
 from pygame.locals import *
 import sys
 import math
+import numpy as np
 
 # settings
 width = 1280
 height = int(width * 0.5625)
 mouse_sensitivity = 1
+fov = 90
 
 pygame.init()
 fpsClock = pygame.time.Clock()
+pygame.mouse.set_visible(False)
+mouse_sensitivity /= 4
 
 
 def read_map():
@@ -41,6 +45,7 @@ def game_init():
     print("Game view")
 
     screen = pygame.display.set_mode((width, height), 0, 32)
+    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pygame.display.set_caption('Game')
 
     return screen
@@ -49,20 +54,16 @@ def game_init():
 def map_init():
     print("Map view")
 
-    scale = 0.5
-
-    screen = pygame.display.set_mode((int(1000 * scale), int(1000 * scale)), 0, 32)
+    screen = pygame.display.set_mode((1000, 1000), 0, 32)
+    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pygame.display.set_caption('Map')
 
-    return screen, scale, 500, 500
+    return screen, 1000, 1000
 
 
 def map_render():
     screen.fill((0, 0, 0))
-
-    # walls
-    for wall in walls:
-        pygame.draw.line(screen, (255, 255, 255), [i * scale for i in wall[0]], [i * scale for i in wall[1]], 2)
+    view = (player.angle-(fov/2), player.angle+(fov/2))
 
     # player
     pygame.draw.circle(screen, (0, 175, 255), (player.x, player.y), 5)
@@ -75,9 +76,45 @@ def map_render():
 
         pygame.draw.line(screen, (255, 0, 0), (player.x, player.y), pos, 2)
 
+    def center_angle(angle):
+        angle -= 90
+
+        rad = math.radians(angle)
+        pos = int(player.x + 50 * math.cos(rad)), int(player.y + 50 * math.sin(rad))
+
+        pygame.draw.line(screen, (255, 0, 0), (player.x, player.y), pos, 2)
+
+        return pos[0] - player.x, pos[1] - player.y
+
     # cone of view
-    draw_ray(player.angle-45)
-    draw_ray(player.angle+45)
+    draw_ray(view[0])
+    draw_ray(view[1])
+    cov_vector = center_angle(view[0]+(fov/2))
+
+    # walls
+    for wall in walls:
+        pygame.draw.line(screen, (255, 255, 255), wall[0], wall[1], 2)
+
+        for point in wall:
+            wall_vector = point[0] - player.x, point[1] - player.y
+
+            def get_angle(v1, v2):
+                f1 = math.sqrt(v1[0] ** 2 + v1[1] ** 2)
+                f2 = math.sqrt(v2[0] ** 2 + v2[1] ** 2)
+
+                uv1 = np.array([v1[0] / f1, v1[1] / f1])
+                uv2 = np.array([v2[0] / f2, v2[1] / f2])
+
+                dot_product = np.dot(uv1, uv2)
+
+                angle = math.degrees(np.arccos(dot_product))
+
+                return angle
+
+            angle = get_angle(cov_vector, wall_vector)
+
+            if 0 <= angle < fov/2:
+                pygame.draw.line(screen, (255, 255, 0), wall[0], wall[1], 2)
 
 
 class Player:
@@ -88,45 +125,49 @@ class Player:
 
 
 walls, start_position = read_map()
-screen, scale, width, height = map_init()
+screen, width, height = map_init()
 
 player = Player(start_position)
 
-# divide for map view
-player.x = (int(player.x/2))
-player.y = (int(player.y/2))
-
-last_X = 0
 while True:
-    def controls(last_X):
+    def controls():
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
             if event.type == MOUSEMOTION:
                 mouse_X, _ = event.pos
-                movement = mouse_X - last_X
+                movement = mouse_X - (width/2)
 
                 player.angle = player.angle + (movement*(360/width)*mouse_sensitivity)
-                last_X = mouse_X
+
+                pygame.mouse.set_pos(width/2, height/2)
 
         keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            pygame.quit()
+            sys.exit()
+
+        rad_1 = math.radians(player.angle - 90)
+        vector_1 = round(2 * math.cos(rad_1)), round(2* math.sin(rad_1))
+
+        rad_2 = math.radians(player.angle)
+        vector_2 = round(2 * math.cos(rad_2)), round(2 * math.sin(rad_2))
+
         if keys[pygame.K_w]:
-            if player.y > 0:
-                player.y -= 1
+            player.x += vector_1[0]
+            player.y += vector_1[1]
         if keys[pygame.K_s]:
-            if player.y < height:
-                player.y += 1
+            player.x += -vector_1[0]
+            player.y += -vector_1[1]
         if keys[pygame.K_a]:
-            if player.x > 0:
-                player.x -= 1
+            player.x += -vector_2[0]
+            player.y += -vector_2[1]
         if keys[pygame.K_d]:
-            if player.x < width:
-                player.x += 1
+            player.x += vector_2[0]
+            player.y += vector_2[1]
 
-        return last_X
-
-    last_X = controls(last_X)
+    controls()
     map_render()
 
     pygame.display.update()
