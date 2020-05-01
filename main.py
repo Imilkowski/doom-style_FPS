@@ -90,11 +90,15 @@ def map_render():
     draw_ray(view[0])
     draw_ray(view[1])
     cov_vector = center_angle(view[0]+(fov/2))
+    left_vector = center_angle(view[0]+(fov/2)-90)
 
     # walls
+    walls_dict = {}
     for wall in walls:
         pygame.draw.line(screen, (255, 255, 255), wall[0], wall[1], 2)
 
+        p_found = False
+        angles = []
         for point in wall:
             wall_vector = point[0] - player.x, point[1] - player.y
 
@@ -112,9 +116,41 @@ def map_render():
                 return angle
 
             angle = get_angle(cov_vector, wall_vector)
+            left_angle = get_angle(left_vector, wall_vector)
 
-            if 0 <= angle < fov/2:
+            if left_angle <= 90:
+                angle = -angle
+
+            if -fov/2 < angle < fov/2:
+                def distance(lp_1, lp_2):
+                    return int(abs((lp_2[0]-lp_1[0])*(lp_1[1]-player.y) - (lp_1[0]-player.x)*(lp_2[1]-lp_1[1])) / np.sqrt(np.square(lp_2[0]-lp_1[0]) + np.square(lp_2[1]-lp_1[1])))
+                    # p1 = np.array([lp_1[0], lp_1[1]])
+                    # p2 = np.array([lp_2[0], lp_2[1]])
+                    # p3 = np.array([player.x, player.y])
+                    # return int(abs(np.cross(p2 - p1, p3 - p1) / np.linalg.norm(p2 - p1)))
+
                 pygame.draw.line(screen, (255, 255, 0), wall[0], wall[1], 2)
+
+                p1 = wall[0][0], wall[0][1]
+                p2 = wall[1][0], wall[1][1]
+                d = distance(p1, p2)
+
+                walls_dict[d] = wall
+                p_found = True
+                break
+            if not p_found:
+                angles.append(angle)
+        if not p_found:
+            abs_angle = abs(angles[0]-angles[1])
+            if abs_angle > abs(angles[0]+angles[1]):
+                if 90 < abs_angle < 180:
+                    pygame.draw.line(screen, (255, 255, 0), wall[0], wall[1], 2)
+
+    # i = len(walls_dict)
+    # for k, v in walls_dict.items():
+    #     i -= 1
+    #     if i == 0:
+    #         pygame.draw.line(screen, (255, 0, 0), v[0], v[1], 2)
 
 
 class Player:
