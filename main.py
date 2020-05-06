@@ -3,6 +3,7 @@ from pygame.locals import *
 import sys
 import math
 import numpy as np
+import cProfile, pstats, io
 
 # settings
 width = 1280
@@ -14,6 +15,22 @@ pygame.init()
 fpsClock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
 mouse_sensitivity /= 4
+
+
+def profile(fnc):
+    def inner(*args, **kwargs):
+        pr = cProfile.Profile()
+        pr.enable()
+        retval = fnc(*args, **kwargs)
+        pr.disable()
+        s = io.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
+        return retval
+
+    return inner
 
 
 def read_map():
@@ -61,6 +78,7 @@ def map_init():
     return screen, 1000, 1000
 
 
+# @profile
 def map_render():
     screen.fill((0, 0, 0))
     view = (player.angle-(fov/2), player.angle+(fov/2))
@@ -76,25 +94,35 @@ def map_render():
 
         pygame.draw.line(screen, (255, 0, 0), (player.x, player.y), pos, 2)
 
-    def center_angle(angle):
+    def vector_from_angle(angle):
         angle -= 90
 
         rad = math.radians(angle)
         pos = int(player.x + 50 * math.cos(rad)), int(player.y + 50 * math.sin(rad))
-
-        pygame.draw.line(screen, (255, 0, 0), (player.x, player.y), pos, 2)
 
         return pos[0] - player.x, pos[1] - player.y
 
     # cone of view
     draw_ray(view[0])
     draw_ray(view[1])
-    cov_vector = center_angle(view[0]+(fov/2))
-    left_vector = center_angle(view[0]+(fov/2)-90)
+    cov_vector = vector_from_angle(view[0]+(fov/2))
+    left_vector = vector_from_angle(view[0]+(fov/2)-90)
 
     # walls
     walls_dict = {}
     for wall in walls:
+        def calculate_distance(p1, p2):
+            def points_distance(p):
+                arm_distance = math.sqrt(((player.x - p[0]) ** 2) + ((player.y - p[1]) ** 2))
+                return arm_distance
+
+            dist1 = points_distance(p1)
+            dist2 = points_distance(p1)
+
+            d = (dist1 + dist2)/2
+
+            walls_dict[d] = wall
+
         pygame.draw.line(screen, (255, 255, 255), wall[0], wall[1], 2)
 
         p_found = False
@@ -122,35 +150,34 @@ def map_render():
                 angle = -angle
 
             if -fov/2 < angle < fov/2:
-                def distance(lp_1, lp_2):
-                    return int(abs((lp_2[0]-lp_1[0])*(lp_1[1]-player.y) - (lp_1[0]-player.x)*(lp_2[1]-lp_1[1])) / np.sqrt(np.square(lp_2[0]-lp_1[0]) + np.square(lp_2[1]-lp_1[1])))
-                    # p1 = np.array([lp_1[0], lp_1[1]])
-                    # p2 = np.array([lp_2[0], lp_2[1]])
-                    # p3 = np.array([player.x, player.y])
-                    # return int(abs(np.cross(p2 - p1, p3 - p1) / np.linalg.norm(p2 - p1)))
-
                 pygame.draw.line(screen, (255, 255, 0), wall[0], wall[1], 2)
+                p_found = True
 
                 p1 = wall[0][0], wall[0][1]
                 p2 = wall[1][0], wall[1][1]
-                d = distance(p1, p2)
-
-                walls_dict[d] = wall
-                p_found = True
+                calculate_distance(p1, p2)
                 break
             if not p_found:
                 angles.append(angle)
+
         if not p_found:
             abs_angle = abs(angles[0]-angles[1])
             if abs_angle > abs(angles[0]+angles[1]):
                 if 90 < abs_angle < 180:
-                    pygame.draw.line(screen, (255, 255, 0), wall[0], wall[1], 2)
+                    pygame.draw.line(screen, (255, 0, 255), wall[0], wall[1], 2)
 
-    # i = len(walls_dict)
-    # for k, v in walls_dict.items():
-    #     i -= 1
-    #     if i == 0:
-    #         pygame.draw.line(screen, (255, 0, 0), v[0], v[1], 2)
+                    p1 = wall[0][0], wall[0][1]
+                    p2 = wall[1][0], wall[1][1]
+                    calculate_distance(p1, p2)
+
+    for k in sorted(walls_dict.keys()):
+        v = walls_dict[k]
+
+        # visualization
+        value = (k/3)
+        if value > 255:
+            value = 255
+        pygame.draw.line(screen, (value, value, 255), v[0], v[1], 2)
 
 
 class Player:

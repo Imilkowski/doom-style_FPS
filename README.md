@@ -2,6 +2,11 @@
 FPS in Doom/Wolfenstein style.
 Made to get even more experience in Python and problem-solving
 
+### v0.1.6
+- Added simple distance calculation
+
+![](ReadMe_Images/v0.1.6.png)
+
 ### v0.1.4
 - Fixes and improvements to visible walls detection
 
