@@ -2,6 +2,11 @@
 FPS in Doom/Wolfenstein style.
 Made to get even more experience in Python and problem-solving
 
+### v0.2
+- Beginning of rendering in FPS style (need to work on scaling with distance)
+
+![](ReadMe_Images/v0.2.png)
+
 ### v0.1.6
 - Added simple distance calculation
 
