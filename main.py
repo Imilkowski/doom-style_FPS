@@ -11,6 +11,8 @@ width = 1280
 height = int(width * 0.5625)
 mouse_sensitivity = 1
 fov = 90
+v_fov = 60
+wall_h = 100
 
 pygame.init()
 fpsClock = pygame.time.Clock()
@@ -194,7 +196,7 @@ def game_render():
         angle -= 90
 
         rad = math.radians(angle)
-        pos = int(player.x + 50 * math.cos(rad)), int(player.y + 50 * math.sin(rad))
+        pos = player.x + 50 * math.cos(rad), player.y + 50 * math.sin(rad)
 
         return pos[0] - player.x, pos[1] - player.y
 
@@ -290,13 +292,18 @@ def game_render():
             x1 = ((wall[0][0] + fov/2) / fov) * width
             x2 = ((wall[1][0] + fov/2) / fov) * width
 
-            y1 = height/2 - (wall[0][1]/3)
-            y2 = height/2 - (wall[1][1]/3)
+            # a1 = math.degrees(math.atan((wall_h/2) / wall[0][1]))
+            # a2 = math.degrees(math.atan((wall_h/2) / wall[1][1]))
 
-            if y1 < 0:
-                y1 = 0
-            if y2 < 0:
-                y2 = 0
+            # getting rid of fish eye
+            dist1 = wall[0][1] * ((1 + math.cos(math.radians(abs(wall[0][0]))))/2)
+            dist2 = wall[1][1] * ((1 + math.cos(math.radians(abs(wall[1][0]))))/2)
+
+            a1 = math.degrees(math.atan((wall_h/2) / dist1))
+            a2 = math.degrees(math.atan((wall_h/2) / dist2))
+
+            y1 = (height/2) * (a1 / (v_fov/2))
+            y2 = (height/2) * (a2 / (v_fov/2))
 
             pygame.draw.polygon(screen, (255 - value, 255 - value, 255 - value),
                                 [(x1, height/2 - y1), (x2, height/2 - y2),
@@ -324,12 +331,9 @@ while True:
                 pygame.quit()
                 sys.exit()
             if event.type == MOUSEMOTION:
-                mouse_X, _ = event.pos
-                movement = mouse_X - (width/2)
+                movement = pygame.mouse.get_rel()
 
-                player.angle = player.angle + (movement*(360/width)*mouse_sensitivity)
-
-                pygame.mouse.set_pos(width/2, height/2)
+                player.angle = player.angle + (movement[0]*(360/width)*mouse_sensitivity)
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:

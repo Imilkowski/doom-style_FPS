@@ -1,6 +1,13 @@
 # First Person Shooter
 FPS in Doom/Wolfenstein style.
-Made to get even more experience in Python and problem-solving
+Made to get more experience in Python and problem-solving
+
+### v0.2.4
+- Proper distance scaling with vertical FOV
+- Fixed "fish eye" distortion
+
+![](ReadMe_Images/v0.2.4.png)
+
 
 ### v0.2
 - Beginning of rendering in FPS style (need to work on scaling with distance)
