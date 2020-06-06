@@ -2,9 +2,16 @@
 FPS in Doom/Wolfenstein style.
 Made to get more experience in Python and problem-solving
 
+### v0.2.9
+- Collor adjustments
+- Added shooting with gun
+
+![](ReadMe_Images/v0.2.9.png)
+
 ### v0.2.8
 - Added map editor (creating and saving simple maps - walls and player starting position)
 - Adjustments to game rendering (few fixes, floor and ceiling, basic crosshair)
+- Added sprinting forward with SHIFT
 * There is still a minor bug where walls bend when close to the end of the screen
 
 ![](ReadMe_Images/v0.2.8_1.png)

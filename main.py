@@ -9,7 +9,7 @@ import cProfile, pstats, io
 # settings
 width = 1280
 height = int(width * 0.5625)
-mouse_sensitivity = 1
+mouse_sensitivity = 0.15
 fov = 90
 v_fov = 60
 wall_h = 100
@@ -17,7 +17,7 @@ wall_h = 100
 pygame.init()
 fpsClock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
-mouse_sensitivity /= 4
+shoot = 0
 
 
 def profile(fnc):
@@ -34,6 +34,21 @@ def profile(fnc):
         return retval
 
     return inner
+
+
+def load_sprites():
+    gun_sprite = []
+    gun_sprite.append(pygame.image.load("Sprites\\Gun_idle.png"))
+    gun_sprite.append(pygame.image.load("Sprites\\Gun_shooting.png"))
+
+    gun_sprite[0] = pygame.transform.scale(gun_sprite[0], (width, height))
+    gun_sprite[1] = pygame.transform.scale(gun_sprite[1], (width, height))
+
+    gunshot_sprite = pygame.image.load("Sprites\\Gunshot.png")
+
+    gunshot_sprite = pygame.transform.scale(gunshot_sprite, (int(width/3), int(width/3)))
+
+    return gun_sprite, gunshot_sprite
 
 
 def read_map():
@@ -69,18 +84,18 @@ def read_map():
 def game_init():
     print("Game view")
 
-    screen = pygame.display.set_mode((width, height), 0, 32)
-    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN)
     pygame.display.set_caption('Game')
 
-    return screen
+    gun_sprite, gunshot_sprite = load_sprites()
+
+    return screen, gun_sprite, gunshot_sprite
 
 
 def map_init():
     print("Map view")
 
-    screen = pygame.display.set_mode((1000, 1000), 0, 32)
-    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((500, 500), pygame.FULLSCREEN)
     pygame.display.set_caption('Map')
 
     return screen, 1000, 1000
@@ -92,15 +107,15 @@ def map_render():
     view = (player.angle-(fov/2), player.angle+(fov/2))
 
     # player
-    pygame.draw.circle(screen, (0, 175, 255), (player.x, player.y), 5)
+    pygame.draw.circle(screen, (0, 175, 255), (int(player.x/10), int(player.y/10)), 3)
 
     def draw_ray(angle):
         angle -= 90
 
         rad = math.radians(angle)
-        pos = int(player.x + 750 * math.cos(rad)), int(player.y + 750 * math.sin(rad))
+        pos = int((player.x + 1000 * math.cos(rad))/10), int((player.y + 1000 * math.sin(rad))/10)
 
-        pygame.draw.line(screen, (255, 0, 0), (player.x, player.y), pos, 2)
+        pygame.draw.line(screen, (255, 0, 0), (player.x/10, player.y/10), pos, 2)
 
     def vector_from_angle(angle):
         angle -= 90
@@ -131,7 +146,7 @@ def map_render():
 
             walls_dict[d].append(wall)
 
-        pygame.draw.line(screen, (255, 255, 255), wall[0], wall[1], 2)
+        pygame.draw.line(screen, (255, 255, 255), (wall[0][0]/10, wall[0][1]/10), (wall[1][0]/10, wall[1][1]/10), 2)
 
         p_found = False
         angles = []
@@ -158,7 +173,7 @@ def map_render():
                 angle = -angle
 
             if -fov/2 < angle < fov/2:
-                pygame.draw.line(screen, (255, 255, 0), wall[0], wall[1], 2)
+                pygame.draw.line(screen, (255, 255, 0), (wall[0][0]/10, wall[0][1]/10), (wall[1][0]/10, wall[1][1]/10), 2)
                 p_found = True
 
                 p1 = wall[0][0], wall[0][1]
@@ -172,7 +187,7 @@ def map_render():
             abs_angle = abs(angles[0]-angles[1])
             if abs_angle > abs(angles[0]+angles[1]):
                 if 90 < abs_angle < 180:
-                    pygame.draw.line(screen, (255, 0, 255), wall[0], wall[1], 2)
+                    pygame.draw.line(screen, (255, 0, 255), (wall[0][0]/10, wall[0][1]/10), (wall[1][0]/10, wall[1][1]/10), 2)
 
                     p1 = wall[0][0], wall[0][1]
                     p2 = wall[1][0], wall[1][1]
@@ -183,11 +198,12 @@ def map_render():
 
         for wall in v:
             # visualization
-            value = (k/3)
+            value = (k/10)
             if value > 255:
                 value = 255
 
-            pygame.draw.line(screen, (value, value, 255), wall[0], wall[1], 2)
+            pygame.draw.line(screen, (value, value, 255), (wall[0][0]/10, wall[0][1]/10), (wall[1][0]/10, wall[1][1]/10), 2)
+
 
 # @profile
 def game_render():
@@ -292,8 +308,8 @@ def game_render():
 
     def render(walls_dict):
         # background
-        pygame.draw.rect(screen, (255, 255, 255), (0, 0, width, height / 2))
-        pygame.draw.rect(screen, (50, 50, 50), (0, height / 2, width, height / 2))
+        pygame.draw.rect(screen, (245, 245, 255), (0, 0, width, height / 2))
+        pygame.draw.rect(screen, (70, 70, 80), (0, height / 2, width, height / 2))
 
         # walls
         for k in sorted(walls_dict.keys(), reverse=True):
@@ -326,12 +342,24 @@ def game_render():
                 y1 = (height / 2) * (a1 / (v_fov / 2))
                 y2 = (height / 2) * (a2 / (v_fov / 2))
 
-                pygame.draw.polygon(screen, (255 - value, 255 - value, 255 - value),
+                B = 255 - value + 10
+                if B > 255:
+                    B = 255
+
+                pygame.draw.polygon(screen, (255 - value, 255 - value, B),
                                     [(x1, height / 2 - y1), (x2, height / 2 - y2),
                                      (x2, height / 2 + y2), (x1, height / 2 + y1)], 0)
 
         # crosshair
-        pygame.draw.circle(screen, (255, 0, 0), (int(width / 2), int(height / 2)), 2)
+        pygame.draw.circle(screen, (255, 25, 25), (int(width / 2), int(height / 2)), 2)
+
+        # gun
+        if shoot == 0:
+            screen.blit(gun_sprite[0], (0, 0))
+        else:
+            screen.blit(gunshot_sprite, (width/2, height/3))
+
+            screen.blit(gun_sprite[1], (0, 0))
 
     render(walls_dict)
 
@@ -345,21 +373,31 @@ class Player:
 
 walls, start_position = read_map()
 
-screen = game_init()
+screen, gun_sprite, gunshot_sprite = game_init()
 # screen, width, height = map_init()
 
 player = Player(start_position)
 
 while True:
-    def controls():
+    def controls(shoot):
+        shoot -= 1
+        if shoot < 0:
+            shoot = 0
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
+
             if event.type == MOUSEMOTION:
                 movement = pygame.mouse.get_rel()
 
                 player.angle = player.angle + (movement[0]*(360/width)*mouse_sensitivity)
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if shoot == 0:
+                        shoot = 6
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
@@ -388,7 +426,9 @@ while True:
             player.x += vector_2[0]
             player.y += vector_2[1]
 
-    controls()
+        return shoot
+
+    shoot = controls(shoot)
     game_render()
     # map_render()
 
