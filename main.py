@@ -39,24 +39,29 @@ def profile(fnc):
 def read_map():
     print("Loading map")
 
-    map_file = open("Maps\\test_map.txt", "r")
+    map_file = open("Maps\\test_map_3.txt", "r")
     contents = map_file.read()
 
     walls = []
 
     lines = contents.split('\n')
+
+    sp = False
     for l in lines:
-        coordinates = l.split('-')
+        if not sp:
+            start_position = l.split(',')
+            start_position = list(map(int, start_position))
+            sp = True
+        else:
+            coordinates = l.split('-')
 
-        map_object = map(int, coordinates[0].split(','))
-        cord1 = list(map_object)
+            cord1 = coordinates[0].split(',')
+            cord1 = list(map(int, cord1))
 
-        map_object = map(int, coordinates[1].split(','))
-        cord2 = list(map_object)
+            cord2 = coordinates[1].split(',')
+            cord2 = list(map(int, cord2))
 
-        walls.append([cord1, cord2])
-
-    start_position = (500, 500)
+            walls.append([cord1, cord2])
 
     return walls, start_position
 
@@ -184,7 +189,7 @@ def map_render():
 
             pygame.draw.line(screen, (value, value, 255), wall[0], wall[1], 2)
 
-
+# @profile
 def game_render():
     screen.fill((0, 0, 0))
     view = (player.angle-(fov/2), player.angle+(fov/2))
@@ -245,6 +250,10 @@ def game_render():
                 f1 = math.sqrt(v1[0] ** 2 + v1[1] ** 2)
                 f2 = math.sqrt(v2[0] ** 2 + v2[1] ** 2)
 
+                if f2 == 0:
+                    f2 = 0.01
+                    print("f2 == 0")
+
                 uv1 = np.array([v1[0] / f1, v1[1] / f1])
                 uv2 = np.array([v2[0] / f2, v2[1] / f2])
 
@@ -281,33 +290,50 @@ def game_render():
                     p2 = wall[1][0], wall[1][1]
                     calculate_distance(p1, p2)
 
-    for k in sorted(walls_dict.keys(), reverse=True):
-        v = walls_dict[k]
+    def render(walls_dict):
+        # background
+        pygame.draw.rect(screen, (255, 255, 255), (0, 0, width, height / 2))
+        pygame.draw.rect(screen, (50, 50, 50), (0, height / 2, width, height / 2))
 
-        for wall in v:
-            value = (k/6)
-            if value > 255:
-                value = 255
+        # walls
+        for k in sorted(walls_dict.keys(), reverse=True):
+            v = walls_dict[k]
 
-            x1 = ((wall[0][0] + fov/2) / fov) * width
-            x2 = ((wall[1][0] + fov/2) / fov) * width
+            for wall in v:
+                value = (k / 10)
+                if value > 255:
+                    value = 255
 
-            # a1 = math.degrees(math.atan((wall_h/2) / wall[0][1]))
-            # a2 = math.degrees(math.atan((wall_h/2) / wall[1][1]))
+                x1 = ((wall[0][0] + fov / 2) / fov) * width
+                x2 = ((wall[1][0] + fov / 2) / fov) * width
 
-            # getting rid of fish eye
-            dist1 = wall[0][1] * ((1 + math.cos(math.radians(abs(wall[0][0]))))/2)
-            dist2 = wall[1][1] * ((1 + math.cos(math.radians(abs(wall[1][0]))))/2)
+                # # fish eye
+                # a1 = math.degrees(math.atan((wall_h/2) / wall[0][1]))
+                # a2 = math.degrees(math.atan((wall_h/2) / wall[1][1]))
 
-            a1 = math.degrees(math.atan((wall_h/2) / dist1))
-            a2 = math.degrees(math.atan((wall_h/2) / dist2))
+                # getting rid of fish eye
+                dist1 = abs(wall[0][1] * math.cos(math.radians(abs(wall[0][0]))))
+                dist2 = abs(wall[1][1] * math.cos(math.radians(abs(wall[1][0]))))
 
-            y1 = (height/2) * (a1 / (v_fov/2))
-            y2 = (height/2) * (a2 / (v_fov/2))
+                if dist1 == 0:
+                    dist1 = 0.01
+                if dist2 == 0:
+                    dist2 = 0.01
 
-            pygame.draw.polygon(screen, (255 - value, 255 - value, 255 - value),
-                                [(x1, height/2 - y1), (x2, height/2 - y2),
-                                (x2, height/2 + y2), (x1, height/2 + y1)], 0)
+                a1 = math.degrees(math.atan((wall_h / 2) / dist1))
+                a2 = math.degrees(math.atan((wall_h / 2) / dist2))
+
+                y1 = (height / 2) * (a1 / (v_fov / 2))
+                y2 = (height / 2) * (a2 / (v_fov / 2))
+
+                pygame.draw.polygon(screen, (255 - value, 255 - value, 255 - value),
+                                    [(x1, height / 2 - y1), (x2, height / 2 - y2),
+                                     (x2, height / 2 + y2), (x1, height / 2 + y1)], 0)
+
+        # crosshair
+        pygame.draw.circle(screen, (255, 0, 0), (int(width / 2), int(height / 2)), 2)
+
+    render(walls_dict)
 
 
 class Player:
@@ -341,12 +367,15 @@ while True:
             sys.exit()
 
         rad_1 = math.radians(player.angle - 90)
-        vector_1 = round(2 * math.cos(rad_1)), round(2* math.sin(rad_1))
+        vector_1 = round(2 * math.cos(rad_1)), round(2 * math.sin(rad_1))
 
         rad_2 = math.radians(player.angle)
         vector_2 = round(2 * math.cos(rad_2)), round(2 * math.sin(rad_2))
 
         if keys[pygame.K_w]:
+            if keys[pygame.K_LSHIFT]:
+                vector_1 = vector_1[0] * 2, vector_1[1] * 2
+
             player.x += vector_1[0]
             player.y += vector_1[1]
         if keys[pygame.K_s]:

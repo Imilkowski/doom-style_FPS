@@ -2,12 +2,19 @@
 FPS in Doom/Wolfenstein style.
 Made to get more experience in Python and problem-solving
 
+### v0.2.8
+- Added map editor (creating and saving simple maps - walls and player starting position)
+- Adjustments to game rendering (few fixes, floor and ceiling, basic crosshair)
+* There is still a minor bug where walls bend when close to the end of the screen
+
+![](ReadMe_Images/v0.2.8_1.png)
+![](ReadMe_Images/v0.2.8_2.png)
+
 ### v0.2.4
 - Proper distance scaling with vertical FOV
 - Fixed "fish eye" distortion
 
 ![](ReadMe_Images/v0.2.4.png)
-
 
 ### v0.2
 - Beginning of rendering in FPS style (need to work on scaling with distance)
